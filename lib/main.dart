@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:air_share/screens/receiver_screen.dart';
 import 'package:air_share/screens/sender_screen.dart';
-import 'package:air_share/services/receiver.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await requestStoragePermission();
   runApp(const MyApp());
 }
 

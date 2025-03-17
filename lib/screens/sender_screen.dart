@@ -1,6 +1,11 @@
+// ignore_for_file: unused_element
+
 import 'dart:io';
 
 import 'package:air_share/models/filter.dart';
+import 'package:air_share/services/file_picker.dart';
+import 'package:air_share/services/network_utils.dart';
+import 'package:air_share/services/sender.dart';
 import 'package:flutter/material.dart';
 
 class SenderScreen extends StatefulWidget {
@@ -11,6 +16,9 @@ class SenderScreen extends StatefulWidget {
 }
 
 class _SenderScreenState extends State<SenderScreen> {
+  final TextEditingController iPTextEditingController = TextEditingController();
+  final int port = 3000;
+
   List<File> files = [];
   final List<Filter> _filters = [
     Filter(name: 'File', icon: Icon(Icons.file_open_rounded)),
@@ -52,7 +60,10 @@ class _SenderScreenState extends State<SenderScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Select files type"),
+            Text(
+              "Select files type",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             // sending files with filters
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.1,
@@ -66,6 +77,14 @@ class _SenderScreenState extends State<SenderScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: GestureDetector(
+                      onTap: () async {
+                        final result =
+                            await FilePickerService().pickMultipleFiles();
+                        setState(() {
+                          files.clear();
+                          files.addAll(result);
+                        });
+                      },
                       child: Container(
                         height: MediaQuery.of(context).size.height * 0.1,
                         width: MediaQuery.of(context).size.height * 0.1,
@@ -91,7 +110,11 @@ class _SenderScreenState extends State<SenderScreen> {
               ),
             ),
             // Review selected files
-            Text("Selected files"),
+            Text(
+              "Selected files",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 4),
             if (files.isNotEmpty) _buildPreviewWidget(),
           ],
         ),
@@ -114,19 +137,19 @@ class _SenderScreenState extends State<SenderScreen> {
           children: [
             Text("Files to share"),
             Text(files.length.toString()),
-            FutureBuilder<int>(
-              future: _calculateTotalSize(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Text("Calculating total size...");
-                } else if (snapshot.hasError) {
-                  return Text("Error calculating total size");
-                } else {
-                  String totalSize = _formatFileSize(snapshot.data!);
-                  return Text("Total size: $totalSize");
-                }
-              },
-            ),
+            // FutureBuilder<int>(
+            //   future: _calculateTotalSize(),
+            //   builder: (context, snapshot) {
+            //     if (snapshot.connectionState == ConnectionState.waiting) {
+            //       return Text("Calculating total size...");
+            //     } else if (snapshot.hasError) {
+            //       return Text("Error calculating total size");
+            //     } else {
+            //       String totalSize = _formatFileSize(snapshot.data!);
+            //       return Text("Total size: $totalSize");
+            //     }
+            //   },
+            // ),
             SizedBox(
               height: 100,
               child: ListView.builder(
@@ -139,37 +162,32 @@ class _SenderScreenState extends State<SenderScreen> {
                       horizontal: 8.0,
                       vertical: 4,
                     ),
-                    child: Column(
-                      children: [
-                        // _isImage(file)
-                        //     ? Image.file(
-                        //         file,
-                        //         width: 50,
-                        //         height: 50,
-                        //         fit: BoxFit.cover,
-                        //       )
-                        //     :
-                        Icon(Icons.insert_drive_file),
-                      ],
-                    ),
+                    child: Column(children: [Icon(Icons.insert_drive_file)]),
                   );
                 },
               ),
             ),
+            SizedBox(
+              height: 50,
+              width: 100,
+              child: TextField(
+                controller: iPTextEditingController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
                   onPressed: () async {
-                    // // _sendFiles;
-                    // print("clicked");
-                    // // TCPSenderService(receiverIP: receiverIP, port: port)
-                    // //     .sendFile(files[0].path);
-                    // TCPSenderService sender = TCPSenderService(
-                    //     receiverIP: _ip.text.trim(), port: port);
-                    // await sender.sendFile(files[0].path);
+                    String? ip = await NetworkUtils.getLocalIpAddress();
+                    if (ip != null) {
+                      _sendData(files, ip);
+                    }
                   },
-                  child: Text("Add"),
+                  child: Text("Send"),
                 ),
                 ElevatedButton(onPressed: () {}, child: Text("Edit")),
               ],
@@ -178,5 +196,20 @@ class _SenderScreenState extends State<SenderScreen> {
         ),
       ),
     );
+  }
+
+  void _sendData(List<File> filePath, String ipAddress) async {
+    if (files.isEmpty) {
+      print('No files selected');
+      return;
+    }
+    print("check");
+    for (File file in files) {
+      SenderService sender = SenderService(
+        reciverIP: iPTextEditingController.text.trim(),
+        port: port,
+      );
+      await sender.sendFile(file.path);
+    }
   }
 }

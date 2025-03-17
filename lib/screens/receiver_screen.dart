@@ -1,3 +1,6 @@
+import 'package:air_share/services/file_picker.dart';
+import 'package:air_share/services/network_utils.dart';
+import 'package:air_share/services/receiver.dart';
 import 'package:flutter/material.dart';
 
 class ReceiverScreen extends StatefulWidget {
@@ -8,6 +11,33 @@ class ReceiverScreen extends StatefulWidget {
 }
 
 class _ReceiverScreenState extends State<ReceiverScreen> {
+  late ReceiverService receiverService;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeReceiver();
+  }
+
+  Future<void> _initializeReceiver() async {
+    String? ip = await NetworkUtils.getLocalIpAddress();
+    if (ip != null) {
+      setState(() {
+        receiverService = ReceiverService(port: 3000, iP: ip);
+        receiverService.startServer();
+      });
+    } else {
+      print("Could not determine local IP address.");
+    }
+  }
+
+  @override
+  void dispose() {
+    receiverService.stopServer();
+    super.dispose();
+  }
+
+  String path = '';
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,12 +60,21 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
                   child: TextField(
+                    controller: TextEditingController(text: path),
                     readOnly: true,
                     decoration: InputDecoration(
                       labelText: "Saving Path",
                       hintText: "No Path Selected",
                       suffixIcon: IconButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          final savePath =
+                              await FilePickerService().pickDirectory();
+                          if (savePath != null) {
+                            setState(() {
+                              path = savePath;
+                            });
+                          }
+                        },
                         icon: Icon(Icons.folder_open_rounded),
                       ),
                     ),
